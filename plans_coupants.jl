@@ -14,9 +14,9 @@ function plans_coupants(s::Int, t::Int, G::Array{Int,2}, d::Array{Int,2}, D::Arr
     ### Variables
     @variable(m, x[1:n, 1:n], Bin)          # vaut 1 si l'on emprunte l'arete ij
     @variable(m, y[1:n], Bin)               # vaut 1 si le trajet passe par la ville d'indice i
-    @variable(m, z, Int)
-    @variable(m, delta_1[1:n, 1:n, Int])    # aléas sur le temps de trajet
-    @variable(m, delta_2[1:n])              # aleas sur la ponderation des villes
+    @variable(m, z)
+    @variable(m, delta_1[1:n, 1:n] >= 0)    # aléas sur le temps de trajet
+    @variable(m, delta_2[1:n] >= 0)              # aleas sur la ponderation des villes
 
     #######################
     ### Problème maître ###
