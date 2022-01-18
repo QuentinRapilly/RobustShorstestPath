@@ -1,8 +1,8 @@
 using JuMP
 using CPLEX
 
-function dualisation(n :: Int, s::Int, t::Int, d::Array{Int,2}, D::Array{Int,2}, p::Array{Int,1},
-    S::Int, p_hat::Array{Int,1}, d1::Int, d2::Int)
+function dualisation(n :: Int, s::Int, t::Int, p::Array{Int,1},
+    S::Int, p_hat::Array{Int,1}, d1::Int, d2::Int})
 
     # Create the model
     m = Model(CPLEX.Optimizer)
