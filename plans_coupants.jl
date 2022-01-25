@@ -1,8 +1,9 @@
 using JuMP
 using CPLEX
 
-function plans_coupants(n :: Int, s::Int, t::Int, Mat :: Array{Int,2}, p::Array{Int,1}, S::Int, p_hat::Array{Int,1})
+function plans_coupants(n :: Int, s::Int, t::Int, p::Array{Int,1}, d1::Int, d2::Int, S::Int, p_hat::Array{Int,1}, Mat :: Array{Int,2}, exist_road :: Array{Int,2})
 
+    nb_roads = size(Mat, 1)
     # Create the model
     m = Model(CPLEX.Optimizer)
 
@@ -22,11 +23,11 @@ function plans_coupants(n :: Int, s::Int, t::Int, Mat :: Array{Int,2}, p::Array{
     @objective(m, Min, z)
 
     ### Contraintes
-    @constraint(m, sum(d[i][j]*x[i][j] for i in 1:n, j in 1:n) <= z)        # Contrainte principale traduisant objectif
+    @constraint(m, sum(r[3]*x[r[0]][r[1]] for r in Mat) <= z)        # Contrainte principale traduisant objectif
     @constraint(m, y[s]==1)                                                 # Chemin passe par s
     @constraint(m, y[t]==1)                                                 # Chemin passe par t
-    @constraint(m, [i in 1:n; i!=s], sum(x[j][j] for j in 1:n) == y[i])     # si on passe par une ville (autre que s), un chemin doit y rentrer
-    @constraint(m, [i in 1:n; i!=t], sum(x[i][j] for j in 1:n) == y[i])     # si on passe par une ville (autre que t), un chemin doit en sortir
+    @constraint(m, [i in 1:n; i!=s], sum(x[j][i]*exist_road[j][i] for j in 1:n) == y[i])     # si on passe par une ville (autre que s), un chemin doit y rentrer
+    @constraint(m, [i in 1:n; i!=t], sum(x[i][j]*exist_road[i][j] for j in 1:n) == y[i])     # si on passe par une ville (autre que t), un chemin doit en sortir
     @constraint(m, Sum(p[i]*y[i] for i in 1:n) <= S)                        # somme des poids des villes avec aleas inferieure à un seuil S
 
 
@@ -42,11 +43,11 @@ function plans_coupants(n :: Int, s::Int, t::Int, Mat :: Array{Int,2}, p::Array{
         @variable(m1, delta_1[1:n, 1:n] >= 0)    # aléas sur le temps de trajet
 
         ### Objectif
-        @objective(m1, Max, sum(d[i][j]*(1+delta_1[i][j])*x[i][j] for i in 1:n, j in 1:n))
+        @objective(m1, Max, sum(r[3]*(1+delta_1[i][j])*x[r[1]][r[2]] for r in Mat))
 
         ### Contraintes
-        @constraint(m1, sum(delta_1[i][j] for i  in 1:n, j in 1:n) <= d[1])
-        @constraint(m1, [i in 1:n, j in 1:n], delta_1[i][j] <= D[i][j])
+        @constraint(m1, sum(delta_1[r[1]][r[2]] for r in Mat) <= d1)
+        @constraint(m1, [r in Mat], delta_1[r[1]][r[2]] <= r[4])
         
         ### Optimisation
         optimize!(m1)
@@ -59,9 +60,9 @@ function plans_coupants(n :: Int, s::Int, t::Int, Mat :: Array{Int,2}, p::Array{
         ### Valeur optimale de delta_1 retournée par le solveur
         delta_1_star = CPLEX.get_solution(m1)
 
-        if sum(d[i][j]*(1+delta_1_star[i][j])*x_val[i][j] for i in 1:n, j in 1:n) > z_val
+        if sum(r[3]*(1+delta_1_star[r[1]][r[2]])*x_val[r[1]][r[2]] for r in Mat) > z_val
             # Ajout de la contrainte au problème maître
-            cstr = @build_constraint( sum(d[i][j]*(1+delta_1_star[i][j])*x[i][j] for i in 1:n, j in 1:n) <= z)
+            cstr = @build_constraint( sum(r[3]*(1+delta_1_star[r[1]][r[2]])*x_val[r[1]][r[2]] for r in Mat) <= z)
             MOI.submit(m, MOI.UserCut(cb_data), cstr)
         end
     end
