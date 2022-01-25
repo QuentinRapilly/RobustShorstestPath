@@ -1,24 +1,19 @@
-# greedy_weight algo:
-#### 1. Initialisation : 
-####    - On part de s (Start), on charge les villes adjacentes à s dans G
-####    - On regarde la ville qui coûte le moins cher en terme de poids (min_{i \in V(s)} p_i) 
-####      où V(s) sont les i tq la ville i est voisine à s
-####    - On vérifie que la ville regardée satisfait les contraintes du problème (i.e. ne viole pas la contrainte sur la
-####      pondération des villes, et aussi sur la longueur du trajet), on prend la première qui satisfait ces contraintes
-####
-#### 2. Algorithme
-####    - Pour chaque ville courante v, on charge les villes adjacentes à v dans G
-####    - On regarde la ville qui coûte le moins cher en terme de poids (min_{i \in V(s)} p_i)
-####    - On vérifie que la ville regardée satisfait les contraintes du problème (i.e. ne viole pas la contrainte sur la
-####      pondération des villes, et aussi sur la longueur du trajet), on prend la première qui satisfait ces contraintes
-####     (simple retour arrière si contraintes pas satisfaites)
+# greedy_weight algo: optimisation gloutonne avec simple retour arrière sur les pondérations des villes
+function greedy_weight(n:Int, s::Int, t::Int,  S::Int, p::Array{Int,1}, p_hat::Array{Int,1}, Mat::Array{Float, 2}, exist_roads::Array{Int, 2})
 
-function greedy_weight(s::Int, t::Int, G::Array{Int,2}, d::Array{Int,2}, D::Array{Int,2}, p::Array{Int,1}, S::Int, p_hat::Array{Int,1})
+    taken_roads = copy(exist_roads)
+    
+    # Remplissage des matrices D et d selon la matrice Mat comportant ces informations en ligne
+    d = zeros(n)
+    D = zeros(n)
+    for line in Mat
+        d[ Mat[line][1] ][ Mat[line][2] ] = Mat[line][3]
+        D[ Mat[line][1] ][ Mat[line][2] ] = Mat[line][4]
+    end
 
-    n = size(G, 1)
-    last_city = s
+    last_city = -1
     current_city = s
-    remaining_cities = Array([i for i in 1:n if i!=s])
+    remaining_cities = Array(zeros(n))
     current_path = Array([s]) 
     current_path_time = 0
 
@@ -26,46 +21,40 @@ function greedy_weight(s::Int, t::Int, G::Array{Int,2}, d::Array{Int,2}, D::Arra
     indices = sortperm(p)
 
     while current_city != t
-
+        
         # Recherche de la ville avec la ponderation minimale parmi les villes non-explorées
-        ind_min = indices[0]
+        j=0
+        # Tant qu'il reste des villes à étudier, on regarde celle dont le poids est minimum et on l'ajoute au chemin
+        while j<n && (taken_roads[current_city][indices[j]] != 1 || sum( p[i]*(1+ p_hat[i]) for i in current_path) > S)
+            j = j+1
+        end
 
-        i=0
-        remaining_cities_current = Array([i for i in 1:n if !in(current_path, i)])
-        while i < n && i in remaining_cities_current
-            if G[current_city][indices[i]] == 1
-                last_city = current_city
-                ind_min = indices[i]
-                pop!(remaining_cities_current, current_city)
-                break
-            else
-                i = i+1
+        if j==n # Pas de ville possible
+            deleteat!(current_path, last_city)                                      # On enlève la ville du chemin emprunté
+            current_path_time = current_path_time - D[last_city][current_city]      # Decrement du temps mis pour emprunter l'arete consideree
+            
+            # Réinitialise les routes potentielles partant de current_city
+            for j in 1:n
+                if taken_roads[current_city][j] == -1
+                    taken_roads[current_city][j] = 1
+                end
             end
-        end
-
-        if i==n || isempty(remaining_cities_current) # Pas de ville restante
-            deleteat!(current_path, last_city)
-            current_path_time = current_path_time - D[last_city][current_city]
+            
+            # Traduit dans taken_roads le fait que l'on ne doit plus emprunter cette arete
+            taken_roads[last_city][current_city] = -1
             current_city = last_city
+            last_city = current_path[-1]
+        
+        else
+            last_city = current_city
+            current_city = indices[j]
+
+            # Mise à jour de l'historique des chemins empruntés
+            taken_roads[last_city][current_city] = -1
+            # Update du temps de parcours
+            current_path_time = current_path_time + D[last_city][current_city]
+            # Ajout de la ville trouvée au chemin courant
+            push!(current_path, current_city)
         end
-
-        # # Verification des contraintes pour le chemin comportant la ville candidate (ind_min)
-        # #TODO : ajouter les contraintes à vérifier pour que la solution en cours soit faisable pour le problème
-        # if contrainte_ok 
-        #     # Update du temps et de la ville courante
-        #     current_path_time = current_path_time + D[current_city][indices[i]]
-        #     current_city = ind_min
-        #     # Ajout de la ville trouvée au chemin courant
-        #     push!(current_path, current_city)
-        #     # Enleve la ville visitée et ajoutee au chemin de la liste des villes restantes
-        #     deleteat!(remaining_cities, ind_min)
-        # end
-
-        # Update du temps et de la ville courante
-        current_path_time = current_path_time + D[current_city][indices[i]]
-        current_city = ind_min
-        # Ajout de la ville trouvée au chemin courant
-        push!(current_path, current_city)
-
     end
 end
