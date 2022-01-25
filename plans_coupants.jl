@@ -109,4 +109,11 @@ function plans_coupants(n :: Int, s::Int, t::Int, p::Array{Int,1}, d1::Int, d2::
     ### Optimisation
     optimize!(m)
 
+    value_x = JuMP.value(x)
+    taken_roads = [(i,j) for i in 1:n, j in 1:n if exist_road[i,j]*value_x[i,j]==1]
+
+    value_y = JuMP.value(y)
+    visited_cities = [i for i in 1:n if value_y[i]==1]
+
+    return taken_roads, visited_cities
 end
