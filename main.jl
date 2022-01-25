@@ -7,25 +7,39 @@ include("reading_files.jl")
 #include("heuristic.jl")
 
 PATH_DATA = "data_small/"
+PATH_RES = "res/"
 
 function main()
 
-    methods = [plans_coupants, dualisation]#, greedy_weight]
+    methods = [dualisation, plans_coupants]#, greedy_weight]
 
     for file in readdir(PATH_DATA)
         if isfile(PATH_DATA * file) && file != ".directory"
-            n, s, t, S, d1, d2, p, ph, Mat, exist_road = read_file(PATH_DATA * file)
+            n, s, t, S, d1, d2, p, ph, sparse_roads, sparse_d, sparse_D, exist_road = read_file(PATH_DATA * file)
+            
+            instance = split(file,".")
+            instance = instance[1]*"_"*instance[2]
+            output_file = open(PATH_RES*instance*".res","w")
 
             for method in methods
-                print("Instance : %s, method : %s\n", file, method)
+                println("Instance : ",file, ", method : ", method)
+
+                println(output_file, "Method : ", method)
 
                 start = time()
-                x, y = method(n, s, t, p, S, ph, d1, d2, Mat, exist_road)
-                t = time() - start
+                x, y, obj = method(n, s, t, p, S, ph, d1, d2, sparse_roads, sparse_d, sparse_D, exist_road)
+                elapsed_time = time() - start
                 
-                printf("Time taken to proceed instance : %.4f\n", t)
+                println("Time taken to proceed instance : ", elapsed_time)
+
+                println(output_file, "Time : ", elapsed_time)
+                println(output_file, "x = ",x)
+                println(output_file, "y = ",y)
+                println(output_file, "obj = ", obj)
+                println(output_file,' ')
 
             end
+            close(output_file)
         end
     end
 end

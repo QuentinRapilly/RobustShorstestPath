@@ -1,9 +1,10 @@
 using JuMP
 using CPLEX
 
-function plans_coupants(n::Int, s::Int, t::Int, p::Array{Int,1}, d1::Int, d2::Int, S::Int, p_hat::Array{Int,1}, Mat::Array{Float32,2}, exist_road::Array{Int,2})
+function plans_coupants(n::Int, s::Int, t::Int, p::Array{Int,1},
+    S::Int, p_hat::Array{Int,1}, d1::Int, d2::Int, roads::Array{Int64, 2}, d::Vector{Float64}, D::Vector{Float64}, exist_road::Array{Int,2})
 
-    nb_roads = size(Mat, 1)
+    nb_roads = size(roads, 1)
     # Create the model
     m = Model(CPLEX.Optimizer)
 
@@ -23,11 +24,12 @@ function plans_coupants(n::Int, s::Int, t::Int, p::Array{Int,1}, d1::Int, d2::In
     @objective(m, Min, z)
 
     ### Contraintes
-    @constraint(m, sum(r[3]*x[r[0]][r[1]] for r in Mat) <= z)        # Contrainte principale traduisant objectif
+    @constraint(m, sum(d[i]*x[ roads[i,1], roads[i,2] ] for i in 1:nb_roads) <= z)        # Contrainte principale traduisant objectif
     @constraint(m, y[s]==1)                                                 # Chemin passe par s
     @constraint(m, y[t]==1)                                                 # Chemin passe par t
-    @constraint(m, [i in 1:n; i!=s], sum(x[j][i]*exist_road[j,i] for j in 1:n) == y[i])     # si on passe par une ville (autre que s), un chemin doit y rentrer
-    @constraint(m, [i in 1:n; i!=t], sum(x[i][j]*exist_road[i,j] for j in 1:n) == y[i])     # si on passe par une ville (autre que t), un chemin doit en sortir
+    @constraint(m, [i in 1:n; i!=s], sum(x[j,i]*exist_road[j,i] for j in 1:n) == y[i])     # si on passe par une ville (autre que s), un chemin doit y rentrer
+    @constraint(m, [i in 1:n; i!=t], sum(x[i,j]*exist_road[i,j] for j in 1:n) == y[i])     # si on passe par une ville (autre que t), un chemin doit en sortir
+    @constraint(m, [i in 1:n, j in 1:n], x[i,j]+x[j,i] <= 1)
     @constraint(m, sum(p[i]*y[i] for i in 1:n) <= S)                        # somme des poids des villes avec aleas inferieure à un seuil S
 
 
@@ -43,26 +45,30 @@ function plans_coupants(n::Int, s::Int, t::Int, p::Array{Int,1}, d1::Int, d2::In
         @variable(m1, delta_1[1:n, 1:n] >= 0)    # aléas sur le temps de trajet
 
         ### Objectif
-        @objective(m1, Max, sum(r[3]*(1+delta_1[i][j])*x[r[1]][r[2]] for r in Mat))
+        @objective(m1, Max, sum(d[i]*(1+delta_1[ roads[i,1], roads[i,2] ])*x[roads[i,1], roads[i,2]] for i in 1:nb_roads))
 
         ### Contraintes
-        @constraint(m1, sum(delta_1[r[1]][r[2]] for r in Mat) <= d1)
-        @constraint(m1, [r in Mat], delta_1[r[1]][r[2]] <= r[4])
+        @constraint(m1, sum(delta_1[roads[i,1], roads[i,2]] for i in 1:nb_roads) <= d1)
+        @constraint(m1, [i in 1:nb_roads], delta_1[roads[i,1], roads[i,2]] <= D[i])
         
         ### Optimisation
         optimize!(m1)
 
         ### Chargement des variables courantes du problème maître
+        if context_id != CPX_CALLBACKCONTEXT_RELAXATION || context_id != CPX_CALLBACKCONTEXT_CANDIDATE
+            return 
+        end
         CPLEX.load_callback_variable_primal(cb_data, context_id)
+        
         z_val = callback_value(cb_data, z)
         x_val = callback_value(cb_data, x)
 
         ### Valeur optimale de delta_1 retournée par le solveur
         delta_1_star = CPLEX.get_solution(m1)
 
-        if sum(r[3]*(1+delta_1_star[r[1]][r[2]])*x_val[r[1]][r[2]] for r in Mat) > z_val
+        if sum(d[i]*(1+delta_1_star[roads[i,1], roads[i,2]])*x_val[roads[i,1], roads[i,2]] for i in 1:nb_roads) > z_val
             # Ajout de la contrainte au problème maître
-            cstr = @build_constraint( sum(r[3]*(1+delta_1_star[r[1]][r[2]])*x_val[r[1]][r[2]] for r in Mat) <= z)
+            cstr = @build_constraint( sum(d[i]*(1+delta_1_star[roads[i,1], roads[i,2]])*x_val[roads[i,1], roads[i,2]] for i in 1:nb_roads) <= z)
             MOI.submit(m, MOI.UserCut(cb_data), cstr)
         end
     end
@@ -89,6 +95,9 @@ function plans_coupants(n::Int, s::Int, t::Int, p::Array{Int,1}, d1::Int, d2::In
         optimize!(m2)
 
         ### Chargement des variables courantes du problème maître
+        if context_id != CPX_CALLBACKCONTEXT_RELAXATION || context_id != CPX_CALLBACKCONTEXT_CANDIDATE
+            return 
+        end
         CPLEX.load_callback_variable_primal(cb_data, context_id)
         y_val = callback_value(cb_data, y)
 
@@ -109,11 +118,12 @@ function plans_coupants(n::Int, s::Int, t::Int, p::Array{Int,1}, d1::Int, d2::In
     ### Optimisation
     optimize!(m)
 
-    value_x = JuMP.value(x)
+    value_x = JuMP.value.(x)
     taken_roads = [(i,j) for i in 1:n, j in 1:n if exist_road[i,j]*value_x[i,j]==1]
 
-    value_y = JuMP.value(y)
+    value_y = JuMP.value.(y)
     visited_cities = [i for i in 1:n if value_y[i]==1]
+    obj = JuMP.objective_value(m)
 
-    return taken_roads, visited_cities
+    return taken_roads, visited_cities, obj
 end
