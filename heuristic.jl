@@ -1,5 +1,5 @@
 # greedy_weight algo: optimisation gloutonne avec simple retour arrière sur les pondérations des villes
-function greedy_weight(n:Int, s::Int, t::Int,  S::Int, p::Array{Int,1}, p_hat::Array{Int,1}, Mat::Array{Float, 2}, exist_roads::Array{Int, 2})
+function greedy_weight(n::Int, s::Int, t::Int,  S::Int, p::Array{Int,1}, p_hat::Array{Int,1}, Mat::Array{Float, 2}, exist_roads::Array{Int, 2})
 
     taken_roads = copy(exist_roads)
     

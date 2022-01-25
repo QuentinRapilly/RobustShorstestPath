@@ -2,7 +2,7 @@ using JuMP
 using CPLEX
 
 function dualisation(n :: Int, s::Int, t::Int, p::Array{Int,1},
-    S::Int, p_hat::Array{Int,1}, d1::Int, d2::Int, Mat :: Array{Float,2}, exist_road :: Array{Float,2})
+    S::Int, p_hat::Array{Int,1}, d1::Int, d2::Int, Mat :: Array{Float32,2}, exist_road :: Array{Int,2})
 
     nb_roads = size(Mat, 1)
     # Create the model

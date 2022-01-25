@@ -1,7 +1,7 @@
 using JuMP
 using CPLEX
 
-function plans_coupants(n :: Int, s::Int, t::Int, p::Array{Int,1}, d1::Int, d2::Int, S::Int, p_hat::Array{Int,1}, Mat :: Array{Int,2}, exist_road :: Array{Int,2})
+function plans_coupants(n :: Int, s::Int, t::Int, p::Array{Int,1}, d1::Int, d2::Int, S::Int, p_hat::Array{Int,1}, Mat :: Array{Float32,2}, exist_road :: Array{Int,2})
 
     nb_roads = size(Mat, 1)
     # Create the model
@@ -28,7 +28,7 @@ function plans_coupants(n :: Int, s::Int, t::Int, p::Array{Int,1}, d1::Int, d2::
     @constraint(m, y[t]==1)                                                 # Chemin passe par t
     @constraint(m, [i in 1:n; i!=s], sum(x[j][i]*exist_road[j,i] for j in 1:n) == y[i])     # si on passe par une ville (autre que s), un chemin doit y rentrer
     @constraint(m, [i in 1:n; i!=t], sum(x[i][j]*exist_road[i,j] for j in 1:n) == y[i])     # si on passe par une ville (autre que t), un chemin doit en sortir
-    @constraint(m, Sum(p[i]*y[i] for i in 1:n) <= S)                        # somme des poids des villes avec aleas inferieure à un seuil S
+    @constraint(m, sum(p[i]*y[i] for i in 1:n) <= S)                        # somme des poids des villes avec aleas inferieure à un seuil S
 
 
     #############################
@@ -97,7 +97,7 @@ function plans_coupants(n :: Int, s::Int, t::Int, p::Array{Int,1}, d1::Int, d2::
 
         if Sum((p[i]+delta_2_star[i]*p_hat[i])*y_val[i] for i in 1:n) > S
             # Ajout de la contrainte au problème maître
-            cstr = @build_constraint( Sum((p[i]+delta_2_star[i]*p_hat[i])*y[i] for i in 1:n) <= S)
+            cstr = @build_constraint( sum((p[i]+delta_2_star[i]*p_hat[i])*y[i] for i in 1:n) <= S)
             MOI.submit(m, MOI.UserCut(cb_data), cstr)
         end
     end
