@@ -26,7 +26,6 @@ function main()
                 printf("Time taken to proceed instance : %.4f\n", t)
 
             end
-
         end
     end
 end

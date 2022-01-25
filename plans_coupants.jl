@@ -1,7 +1,7 @@
 using JuMP
 using CPLEX
 
-function plans_coupants(n :: Int, s::Int, t::Int, p::Array{Int,1}, d1::Int, d2::Int, S::Int, p_hat::Array{Int,1}, Mat :: Array{Float32,2}, exist_road :: Array{Int,2})
+function plans_coupants(n::Int, s::Int, t::Int, p::Array{Int,1}, d1::Int, d2::Int, S::Int, p_hat::Array{Int,1}, Mat::Array{Float32,2}, exist_road::Array{Int,2})
 
     nb_roads = size(Mat, 1)
     # Create the model
