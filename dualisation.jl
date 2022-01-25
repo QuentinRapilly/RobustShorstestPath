@@ -28,9 +28,16 @@ function dualisation(n :: Int, s::Int, t::Int, p::Array{Int,1},
     @constraint(m, y[s]==1)
     @constraint(m, y[t]==1)
 
-    @constraint(m, [i in 1:n; i!=s], sum(x[j,i]*exist_road[j,i] for j in 1:n) == y[i])
-    @constraint(m, [i in 1:n; i!=t], sum(x[i,j]*exist_road[i,j] for j in 1:n) == y[i])
+    @constraint(m, [i in 1:n; i!=s], sum(x[j][i]*exist_road[j][i] for j in 1:n) == y[i])
+    @constraint(m, [i in 1:n; i!=t], sum(x[i][j]*exist_road[i][j] for j in 1:n) == y[i])
     
     # Optimize the problem
     optimize!(m)
+
+    value_x = JuMP.value(x)
+    taken_roads = [(i,j) for i in 1:n, j in 1:n if exist_road[i,j]*value_x[i,j]==1]
+
+    value_y = JuMP.value(y)
+    visited_cities = [i for i in 1:n if value_y[i]==1]
+    return taken_roads, visited_cities
 end

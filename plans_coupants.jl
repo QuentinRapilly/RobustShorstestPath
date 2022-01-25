@@ -26,8 +26,8 @@ function plans_coupants(n :: Int, s::Int, t::Int, p::Array{Int,1}, d1::Int, d2::
     @constraint(m, sum(r[3]*x[r[0]][r[1]] for r in Mat) <= z)        # Contrainte principale traduisant objectif
     @constraint(m, y[s]==1)                                                 # Chemin passe par s
     @constraint(m, y[t]==1)                                                 # Chemin passe par t
-    @constraint(m, [i in 1:n; i!=s], sum(x[j][i]*exist_road[j][i] for j in 1:n) == y[i])     # si on passe par une ville (autre que s), un chemin doit y rentrer
-    @constraint(m, [i in 1:n; i!=t], sum(x[i][j]*exist_road[i][j] for j in 1:n) == y[i])     # si on passe par une ville (autre que t), un chemin doit en sortir
+    @constraint(m, [i in 1:n; i!=s], sum(x[j][i]*exist_road[j,i] for j in 1:n) == y[i])     # si on passe par une ville (autre que s), un chemin doit y rentrer
+    @constraint(m, [i in 1:n; i!=t], sum(x[i][j]*exist_road[i,j] for j in 1:n) == y[i])     # si on passe par une ville (autre que t), un chemin doit en sortir
     @constraint(m, Sum(p[i]*y[i] for i in 1:n) <= S)                        # somme des poids des villes avec aleas inferieure à un seuil S
 
 
@@ -109,4 +109,11 @@ function plans_coupants(n :: Int, s::Int, t::Int, p::Array{Int,1}, d1::Int, d2::
     ### Optimisation
     optimize!(m)
 
+    value_x = JuMP.value(x)
+    taken_roads = [(i,j) for i in 1:n, j in 1:n if exist_road[i,j]*value_x[i,j]==1]
+
+    value_y = JuMP.value(y)
+    visited_cities = [i for i in 1:n if value_y[i]==1]
+
+    return taken_roads, visited_cities
 end
