@@ -41,11 +41,18 @@ function plans_coupants(n::Int, s::Int, t::Int, p::Array{Int,1},
         ### Modele pour sous-probleme 1
         m1 = Model(CPLEX.Optimizer)
 
+        ### Chargement des variables courantes du problème maître
+        if  context_id != CPX_CALLBACKCONTEXT_CANDIDATE
+            return 
+        end
+
         # Variable
         @variable(m1, delta_1[1:n, 1:n] >= 0)    # aléas sur le temps de trajet
+        CPLEX.load_callback_variable_primal(cb_data, context_id)
+        x_val = callback_value.(cb_data, x)
 
         ### Objectif
-        @objective(m1, Max, sum(d[i]*(1+delta_1[ roads[i,1], roads[i,2] ])*x[roads[i,1], roads[i,2]] for i in 1:nb_roads))
+        @objective(m1, Max, sum(d[i]*(1+delta_1[ roads[i,1], roads[i,2] ])*x_val[roads[i,1], roads[i,2]] for i in 1:nb_roads))
 
         ### Contraintes
         @constraint(m1, sum(delta_1[roads[i,1], roads[i,2]] for i in 1:nb_roads) <= d1)
@@ -53,23 +60,16 @@ function plans_coupants(n::Int, s::Int, t::Int, p::Array{Int,1},
         
         ### Optimisation
         optimize!(m1)
-
-        ### Chargement des variables courantes du problème maître
-        if context_id != CPX_CALLBACKCONTEXT_RELAXATION || context_id != CPX_CALLBACKCONTEXT_CANDIDATE
-            return 
-        end
-        CPLEX.load_callback_variable_primal(cb_data, context_id)
         
-        z_val = callback_value(cb_data, z)
-        x_val = callback_value(cb_data, x)
+        z_val = callback_value.(cb_data, z)
 
         ### Valeur optimale de delta_1 retournée par le solveur
-        delta_1_star = CPLEX.get_solution(m1)
+        delta_1_star = JuMP.value.(delta_1)
 
         if sum(d[i]*(1+delta_1_star[roads[i,1], roads[i,2]])*x_val[roads[i,1], roads[i,2]] for i in 1:nb_roads) > z_val
             # Ajout de la contrainte au problème maître
             cstr = @build_constraint( sum(d[i]*(1+delta_1_star[roads[i,1], roads[i,2]])*x_val[roads[i,1], roads[i,2]] for i in 1:nb_roads) <= z)
-            MOI.submit(m, MOI.UserCut(cb_data), cstr)
+            MOI.submit(m, MOI.LazyConstraint(cb_data), cstr)
         end
     end
 
@@ -81,11 +81,19 @@ function plans_coupants(n::Int, s::Int, t::Int, p::Array{Int,1},
         ### Modele pour le sous-probleme 2
         m2 = Model(CPLEX.Optimizer)
 
+        ### Chargement des variables courantes du problème maître
+        if context_id != CPX_CALLBACKCONTEXT_CANDIDATE
+            return 
+        end
+
         # Variable
         @variable(m2, delta_2[1:n] >= 0)                             # aleas sur la ponderation des villes
 
+        CPLEX.load_callback_variable_primal(cb_data, context_id)
+        y_val = callback_value.(cb_data, y)
+
         ### Objectif
-        @objective(m2, Max, sum(p[i] + delta_2[i]*p_hat[i] for i in 1:n))
+        @objective(m2, Max, sum((p[i] + delta_2[i]*p_hat[i])*y_val[i] for i in 1:n))
 
         ### Contraintes
         @constraint(m2, [i in 1:n], delta_2[i] <= 2)
@@ -94,25 +102,18 @@ function plans_coupants(n::Int, s::Int, t::Int, p::Array{Int,1},
         ### Optimisation
         optimize!(m2)
 
-        ### Chargement des variables courantes du problème maître
-        if context_id != CPX_CALLBACKCONTEXT_RELAXATION || context_id != CPX_CALLBACKCONTEXT_CANDIDATE
-            return 
-        end
-        CPLEX.load_callback_variable_primal(cb_data, context_id)
-        y_val = callback_value(cb_data, y)
-
         ### Valeur optimale de delta_1 retournée par le solveur
-        delta_2_star = CPLEX.get_solution(m2)
+        delta_2_star = JuMP.value.(delta_2)
 
-        if Sum((p[i]+delta_2_star[i]*p_hat[i])*y_val[i] for i in 1:n) > S
+        if sum((p[i]+delta_2_star[i]*p_hat[i])*y_val[i] for i in 1:n) > S
             # Ajout de la contrainte au problème maître
-            cstr = @build_constraint( sum((p[i]+delta_2_star[i]*p_hat[i])*y[i] for i in 1:n) <= S)
-            MOI.submit(m, MOI.UserCut(cb_data), cstr)
+            cstr = @build_constraint( sum((p[i]+delta_2_star[i]*p_hat[i])*y_val[i] for i in 1:n) <= S)
+            MOI.submit(m, MOI.LazyConstraint(cb_data), cstr)
         end
     end
 
 
-    MOI.set(m, CPLEX.CallbackFunction(), Spo_callback)
+    #MOI.set(m, CPLEX.CallbackFunction(), Spo_callback)
     MOI.set(m, CPLEX.CallbackFunction(), Spj_callback)
 
     ### Optimisation
