@@ -7,6 +7,7 @@ function dualisation(n::Int, s::Int, t::Int, p::Array{Int,1},
     nb_roads = size(roads,1)
     # Create the model
     m = Model(CPLEX.Optimizer)
+    MOI.set(m, MOI.Silent(), true)
 
     ### Variables
     @variable(m, y[1:n], Bin)
@@ -43,7 +44,7 @@ function dualisation(n::Int, s::Int, t::Int, p::Array{Int,1},
     value_y = JuMP.value.(y)
     visited_cities = [i for i in 1:n if value_y[i]==1]
 
-    obj = sum(d[i]*(1+D[i])*value_x[roads[i,1],roads[i,2]]*exist_road[roads[i,1],roads[i,2]] for i in 1:nb_roads)
+    obj = JuMP.objective_value(m)
 
     return taken_roads, visited_cities, obj
 end
