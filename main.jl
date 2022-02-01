@@ -15,7 +15,7 @@ function main()
 
     for file in readdir(PATH_DATA)
         if isfile(PATH_DATA * file) && file != ".directory"
-            n, s, t, S, d1, d2, p, ph, sparse_roads, sparse_d, sparse_D, exist_road = read_file(PATH_DATA * file)
+            n, s, t, S, d1, d2, p, ph, sparse_roads, sparse_d, sparse_D, exist_road = read_line_by_line(PATH_DATA * file)
             
             instance = split(file,".")
             instance = instance[1]*"_"*instance[2]

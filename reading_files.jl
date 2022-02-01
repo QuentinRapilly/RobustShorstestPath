@@ -69,6 +69,6 @@ function read_line_by_line(file_name::String)
             exist_road[ roads[i,1], roads[i,2] ] = 1
         end
 
-        return(n,s,t,S,d1,d2,p,ph,roads,sparse_d,sparse_D,exist_road)
+        return(n,s,t,S,d1,d2,p,p_hat,roads,sparse_d,sparse_D,exist_road)
     end
 end

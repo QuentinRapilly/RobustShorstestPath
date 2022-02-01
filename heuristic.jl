@@ -1,20 +1,13 @@
 # greedy_weight algo: optimisation gloutonne avec simple retour arrière sur les pondérations des villes
-function greedy_weight(n::Int, s::Int, t::Int,  S::Int, p::Array{Int,1}, p_hat::Array{Int,1}, Mat::Array{Float32, 2}, exist_roads::Array{Int, 2})
+function greedy_weight(n::Int, s::Int, t::Int, p::Array{Int,1}, S::Int, p_hat::Array{Int,1}, 
+    d1::Int, d2::Int, roads::Array{Int64, 2}, d::Vector{Float64}, D::Vector{Float64}, exist_road::Array{Int,2})
 
-    taken_roads = copy(exist_roads)
-    
-    # Remplissage des matrices D et d selon la matrice Mat comportant ces informations en ligne
-    d = zeros(n)
-    D = zeros(n)
-    for line in Mat
-        d[ Mat[line][1] ][ Mat[line][2] ] = Mat[line][3]
-        D[ Mat[line][1] ][ Mat[line][2] ] = Mat[line][4]
-    end
+    taken_roads = copy(exist_road)
 
     last_city = -1
     current_city = s
     remaining_cities = Array(zeros(n))
-    current_path = Array([s]) 
+    current_path = Array([s])
     current_path_time = 0
 
     # permutation permettant de trier la liste des poids
