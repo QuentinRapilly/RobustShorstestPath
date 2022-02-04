@@ -1,17 +1,18 @@
 using JuMP
 using CPLEX
 
-include("plans_coupants.jl")
+include("branch_and_cut.jl")
 include("dualisation.jl")
 include("reading_files.jl")
-#include("heuristic.jl")
+include("heuristic.jl")
+include("plans_coupants.jl")
 
 PATH_DATA = "data_small/"
 PATH_RES = "res/"
 
 function main()
 
-    methods = [dualisation, plans_coupants]#, greedy_weight]
+    methods = [plans_coupants, dualisation, branch_and_cut]#, greedy_weight]
 
     for file in readdir(PATH_DATA)
         if isfile(PATH_DATA * file) && file != ".directory"
