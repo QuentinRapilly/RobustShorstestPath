@@ -12,7 +12,7 @@ PATH_RES = "res/"
 
 function main()
 
-    methods = [plans_coupants, dualisation, branch_and_cut]#, greedy_weight]
+    methods = [plans_coupants, dualisation, branch_and_cut, greedy_weight]
 
     for file in readdir(PATH_DATA)
         if isfile(PATH_DATA * file) && file != ".directory"

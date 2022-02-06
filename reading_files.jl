@@ -72,3 +72,22 @@ function read_line_by_line(file_name::String)
         return(n,s,t,S,d1,d2,p,p_hat,roads,sparse_d,sparse_D,exist_road)
     end
 end
+
+function sort_instances_by_size(dir_name::String)
+    sizes = []
+    filenames = []
+
+    for filename in readdir(dir_name)
+        arr = split(filename, "_")
+        if length(arr)!=1
+            println(arr)
+            size = parse(Int, arr[1])
+            push!(sizes, size)
+            push!(filenames, filename)
+        end
+    end
+
+    ind = sortperm(sizes)
+    sorted_by_size_filenames = [filenames[ind[i]] for i in 1:length(ind)]
+    return sorted_by_size_filenames
+end
