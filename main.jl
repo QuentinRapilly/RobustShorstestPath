@@ -32,10 +32,9 @@ function main()
                 elapsed_time = time() - start
                 
                 println("Time taken to proceed instance : ", elapsed_time)
-
                 println(output_file, "Time : ", elapsed_time)
-                println(output_file, "x = ",x)
-                println(output_file, "y = ",y)
+                println(output_file, "x = ", x)
+                println(output_file, "y = ", y)
                 println(output_file, "obj = ", obj)
                 println(output_file,' ')
 
