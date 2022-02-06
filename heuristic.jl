@@ -18,14 +18,13 @@ function greedy_weight(n::Int, s::Int, t::Int, p::Array{Int,1}, S::Int, p_hat::A
     last_city = -1
     current_city = s
     current_path = Array([s])
-    current_path_time = 0
 
     # Pire des cas sur l'alea de la ponderation des villes
     delta_2 = rand(Float64, n)
     delta_2 = d2*delta_2/sum(delta_2)
 
     # permutation permettant de trier la liste des poids
-    indices = sortperm(p)
+    indices = sortperm(p + delta_2.*p_hat)
     println("indices = ", indices)
 
     while current_city != t
@@ -33,13 +32,13 @@ function greedy_weight(n::Int, s::Int, t::Int, p::Array{Int,1}, S::Int, p_hat::A
         # Recherche de la ville avec la ponderation minimale parmi les villes non-explorées
         j=1
         # Tant qu'il reste des villes à étudier, on regarde celle dont le poids est minimum et on l'ajoute au chemin
-        while j<n && (taken_roads[current_city, indices[j]] != 1 || sum( p[i]*(1+ delta_2[i]*p_hat[i] ) for i in current_path) + p[indices[j]]*(1+delta_2[indices[j]]*p_hat[indices[j]]) > S)
+        while j<n && taken_roads[current_city, indices[j]] != 1
             # println("taken_roads : ", taken_roads[current_city, indices[j]])
             # println("somme pondération : ", sum( p[i]*(1+ delta_2[i]*p_hat[i] ) for i in current_path))
             j = j+1
         end
 
-        if j == n # Pas de ville possible
+        if j == n || sum( p[i] + delta_2[i]*p_hat[i] for i in current_path) + p[indices[j]] + delta_2[indices[j]]*p_hat[indices[j]] > S
             println("No further path possible.")
 
             if current_city == s # No possible path.
@@ -49,29 +48,28 @@ function greedy_weight(n::Int, s::Int, t::Int, p::Array{Int,1}, S::Int, p_hat::A
                 delta_2 = d2*delta_2/sum(delta_2)
                 last_city = -1
                 current_path = [s]
-                current_path_time = 0
                 taken_roads = copy(exist_road)
 
             else
-                 # Traduit dans taken_roads le fait que l'on ne doit plus emprunter cette arete
+                # Traduit dans taken_roads le fait que l'on ne doit plus emprunter cette arete
                 taken_roads[last_city, current_city] = -1
 
                 # On revient en arriere
                 current_city = last_city
+
+                println("deleted ", current_path[length(current_path)], " from the path")    
+                deleteat!(current_path, length(current_path)) # On enlève la ville du chemin emprunté
+
                 last_city = current_path[length(current_path)]
 
                 # Réinitialise les routes potentielles partant de last_city
-                # for i in 1:n
-                #     if taken_roads[last_city, i] == -1
-                #         taken_roads[last_city, i] = 1
-                #         # taken_roads[i, last_city] = 1
-                #     end
-                # end
+                for i in 1:n
+                    if taken_roads[last_city, i] == -1
+                        taken_roads[last_city, i] = 1
+                    end
+                end
 
-                println("deleted ", current_path[length(current_path)], " from the path")    
-                deleteat!(current_path, length(current_path))                             # On enlève la ville du chemin emprunté
                 println("current_path = ", current_path) 
-                current_path_time = current_path_time - sparse_d[last_city, current_city]      # Decrement du temps mis pour emprunter l'arete consideree
             end
         
         else
@@ -83,8 +81,6 @@ function greedy_weight(n::Int, s::Int, t::Int, p::Array{Int,1}, S::Int, p_hat::A
             for i in 1:n
                 taken_roads[i, last_city] = -1 # On ne passe qu'une seule fois par une ville
             end
-            # Update du temps de parcours
-            current_path_time = current_path_time + sparse_d[last_city, current_city]
             # Ajout de la ville trouvée au chemin courant
             push!(current_path, current_city)
             println("Added ", current_city, " to the path.")
