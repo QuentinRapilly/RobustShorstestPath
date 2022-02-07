@@ -12,12 +12,12 @@ PATH_RES = "res/"
 
 function main(start_at_file)
 
-    methods =  [greedy_weight] #[plans_coupants, dualisation, branch_and_cut]
+    methods =  [plans_coupants, dualisation, branch_and_cut, greedy_weight]
 
-    time_limit = 180
+    time_limit = 120
 
     csv_file = open(PATH_RES*"output.csv", "w")
-    println(csv_file, "instance,time_PC,obj_PC,gap_PC,time_dual,obj_dual,gap_dual,time_branch,obj_branch,gap_branch")
+    println(csv_file, "instance,time_PC,obj_PC,gap_PC,time_dual,obj_dual,gap_dual,time_branch,obj_branch,gap_branch,time_heur,obj_heur,gap_heur")
     close(csv_file)
 
     files_array = sort_instances_by_size(PATH_DATA)

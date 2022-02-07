@@ -75,12 +75,13 @@ function greedy_weight(n::Int, s::Int, t::Int, p::Array{Int,1}, S::Int, p_hat::A
                 last_city = s
                 taken_roads = copy(exist_road)
         
-                println("Valeur de reduced S : ",reduced_S)
-                readline()
+                # println("Valeur de reduced S : ",reduced_S)
+                # readline()
                 for i in 1:n 
                     taken_roads[i,s]=0
                 end
                 it += 1
+                # print("it = ", it, "\r")
                 
             else
                 # Réinitialise les routes potentielles arrivant en current_city
@@ -112,7 +113,7 @@ function greedy_weight(n::Int, s::Int, t::Int, p::Array{Int,1}, S::Int, p_hat::A
             current_city = ind_min
 
             taken_roads[last_city, current_city] = -2
-            taken_roads[current_city, last_city] = -2
+            taken_roads[current_city, last_city] = -1
 
             for i in 1:n
                 if taken_roads[i, current_city] == 1
