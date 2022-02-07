@@ -80,7 +80,7 @@ function sort_instances_by_size(dir_name::String)
     for filename in readdir(dir_name)
         arr = split(filename, "_")
         if length(arr)!=1
-            println(arr)
+            #println(arr)
             size = parse(Int, arr[1])
             push!(sizes, size)
             push!(filenames, filename)

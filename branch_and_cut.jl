@@ -3,11 +3,12 @@ using CPLEX
 
 function branch_and_cut(n::Int, s::Int, t::Int, p::Array{Int,1},
     S::Int, p_hat::Array{Int,1}, d1::Int, d2::Int, roads::Array{Int64, 2},
-    d::Vector{Float64}, D::Vector{Float64}, exist_road::Array{Int,2})
+    d::Vector{Float64}, D::Vector{Float64}, exist_road::Array{Int,2}, time_limit::Int)
 
     nb_roads = size(roads, 1)
     # Create the model
     m = Model(CPLEX.Optimizer)
+    set_time_limit_sec(m, time_limit)
     MOI.set(m, MOI.Silent(), true)
 
     # 1 seul thread pour utiliser les callbacks
@@ -71,7 +72,6 @@ function branch_and_cut(n::Int, s::Int, t::Int, p::Array{Int,1},
         delta_1_star = JuMP.value.(delta_1)
         tmp1 = sum(d[i]*(1+delta_1_star[roads[i,1], roads[i,2]])*x_val[roads[i,1], roads[i,2]] for i in 1:nb_roads)
         if  tmp1 > z_val
-            #println("Valeur de la somme : ",tmp,", valeur de z : ", z_val)
             # Ajout de la contrainte au problème maître
             cstr = @build_constraint( sum(d[i]*(1+delta_1_star[roads[i,1], roads[i,2]])*x[roads[i,1], roads[i,2]] for i in 1:nb_roads) <= z)
             MOI.submit(m, MOI.LazyConstraint(cb_data), cstr)
@@ -103,14 +103,9 @@ function branch_and_cut(n::Int, s::Int, t::Int, p::Array{Int,1},
 
         tmp2 = sum((p[i]+delta_2_star[i]*p_hat[i])*y_val[i] for i in 1:n)
         if  tmp2 > S
-            #println("Valeur de la somme : ", tmp, ", valeur de S : ",S)
-            #println("Add cstr")
             # Ajout de la contrainte au problème maître
             cstr = @build_constraint( sum((p[i]+delta_2_star[i]*p_hat[i])*y[i] for i in 1:n) <= S)
             MOI.submit(m, MOI.LazyConstraint(cb_data), cstr)
-        end
-        if tmp2 <= S && tmp1 <= z_val
-            println("tmp 1 : ", tmp1," z : ",z_val, " tmp2 : ",tmp2," S : ",S)
         end
     end
 
@@ -127,5 +122,7 @@ function branch_and_cut(n::Int, s::Int, t::Int, p::Array{Int,1},
     visited_cities = [i for i in 1:n if value_y[i]==1]
     obj = JuMP.objective_value(m)
 
-    return taken_roads, visited_cities, obj
+    GAP = MOI.get(m, MOI.RelativeGap())
+
+    return taken_roads, visited_cities, obj, GAP
 end

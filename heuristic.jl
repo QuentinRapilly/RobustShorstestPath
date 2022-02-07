@@ -3,7 +3,7 @@ using CPLEX
 
 # greedy_weight algo: optimisation gloutonne avec simple retour arrière sur les pondérations des villes
 function greedy_weight(n::Int, s::Int, t::Int, p::Array{Int,1}, S::Int, p_hat::Array{Int,1}, 
-    d1::Int, d2::Int, roads::Array{Int64, 2}, d::Array{Float64, 1}, D::Array{Float64, 1}, exist_road::Array{Int,2})
+    d1::Int, d2::Int, roads::Array{Int64, 2}, d::Array{Float64, 1}, D::Array{Float64, 1}, exist_road::Array{Int,2}, time_limit::Int)
 
     sparse_d = zeros(n,n)
     sparse_D = zeros(n,n)
@@ -28,7 +28,7 @@ function greedy_weight(n::Int, s::Int, t::Int, p::Array{Int,1}, S::Int, p_hat::A
     indices = sortperm(p + delta_2.*p_hat)
     # println("indices = ", indices)
 
-    while current_city != t
+    while current_city != t && (time() - start < time_limit)
 
         # Recherche de la ville avec la ponderation minimale parmi les villes non-explorées
         j=1

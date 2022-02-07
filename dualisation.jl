@@ -3,12 +3,14 @@ using CPLEX
 
 function dualisation(n::Int, s::Int, t::Int, p::Array{Int,1},
     S::Int, p_hat::Array{Int,1}, d1::Int, d2::Int, roads::Array{Int64, 2},
-    d::Vector{Float64}, D::Vector{Float64}, exist_road::Array{Int,2})
+    d::Vector{Float64}, D::Vector{Float64}, exist_road::Array{Int,2}, time_limit::Int)
 
     nb_roads = size(roads,1)
     # Create the model
     m = Model(CPLEX.Optimizer)
     MOI.set(m, MOI.Silent(), true)
+
+    set_time_limit_sec(m, time_limit)
 
     ### Variables
     @variable(m, y[1:n], Bin)
@@ -47,5 +49,7 @@ function dualisation(n::Int, s::Int, t::Int, p::Array{Int,1},
 
     obj = JuMP.objective_value(m)
 
-    return taken_roads, visited_cities, obj
+    GAP = MOI.get(m, MOI.RelativeGap())
+
+    return taken_roads, visited_cities, obj, GAP
 end

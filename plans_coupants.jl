@@ -6,8 +6,9 @@ using Flux
 
 function plans_coupants(n::Int, s::Int, t::Int, p::Array{Int,1},
     S::Int, p_hat::Array{Int,1}, d1::Int, d2::Int, roads::Array{Int64, 2},
-    d::Vector{Float64}, D::Vector{Float64}, exist_road::Array{Int,2})
+    d::Vector{Float64}, D::Vector{Float64}, exist_road::Array{Int,2}, time_limit::Int)
 
+    start = time()
     list_delta_1 = zeros(Float64, 1, n, n)
     list_delta_2 = zeros(Float64,1,n)
 
@@ -16,21 +17,26 @@ function plans_coupants(n::Int, s::Int, t::Int, p::Array{Int,1},
     x=-1
     y=-1
     z=-1
+    gap = 100
 
-    while true
+    while time() - start < time_limit
         added_cstr = false
-        x, y, z = master_problem(n, s, t, p, S, p_hat, roads, d, D, exist_road, list_delta_1, list_delta_2)
+        x, y, z, gap = master_problem(n, s, t, p, S, p_hat, roads, d, D, exist_road, list_delta_1, list_delta_2)
         delta_1 = SPo(x,  n, roads, d, D, d1, exist_road)
         delta_2 = SPj(y, n, p, p_hat, d2, roads, exist_road)
 
         if sum(d[i]*(1+delta_1[roads[i,1], roads[i,2]])*x[roads[i,1], roads[i,2]] for i in 1:nb_roads) > z
             list_delta_1 = vcat(list_delta_1,Flux.unsqueeze(delta_1,1))
             added_cstr = true
+            gap = 100
+            z = -1
         end
 
         if sum((p[i]+delta_2[i]*p_hat[i])*y[i] for i in 1:n) > S
             list_delta_2 = vcat(list_delta_2, Flux.unsqueeze(delta_2,1))
             added_cstr = true
+            gap = 100
+            z = -1
         end
 
         (! added_cstr) && break
@@ -40,7 +46,7 @@ function plans_coupants(n::Int, s::Int, t::Int, p::Array{Int,1},
     taken_roads = [(i,j) for i in 1:n, j in 1:n if exist_road[i,j]*x[i,j]==1]
     visited_cities = [i for i in 1:n if y[i]==1]
 
-    return taken_roads, visited_cities, z
+    return taken_roads, visited_cities, z, gap
 
 end
 
@@ -83,7 +89,8 @@ function master_problem(n::Int, s::Int, t::Int, p::Array{Int,1},
 
     ### Optimisation
     optimize!(m)
-    return JuMP.value.(x), JuMP.value.(y), JuMP.value.(z)
+    GAP = MOI.get(m, MOI.RelativeGap())
+    return JuMP.value.(x), JuMP.value.(y), JuMP.value.(z), GAP
 end
 
 function SPo(x::Array{Float64,2}, n::Int, roads::Array{Int64, 2},
