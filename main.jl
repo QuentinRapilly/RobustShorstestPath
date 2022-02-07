@@ -4,7 +4,7 @@ using CPLEX
 include("branch_and_cut.jl")
 include("dualisation.jl")
 include("reading_files.jl")
-include("heuristic.jl")
+include("heuristic2.jl")
 include("plans_coupants.jl")
 
 PATH_DATA = "data/"
@@ -12,7 +12,7 @@ PATH_RES = "res/"
 
 function main(start_at_file)
 
-    methods = [plans_coupants, dualisation, branch_and_cut]# ,greedy_weight]
+    methods =  [greedy_weight] #[plans_coupants, dualisation, branch_and_cut]
 
     time_limit = 180
 
@@ -34,7 +34,7 @@ function main(start_at_file)
             csv_line = instance*","
 
             for method in methods
-                println("Instance : ",file, ", method : ", method)
+                println("Instance : ",file, ", method : \n", method)
 
                 println(output_file, "Method : ", method)
 
@@ -49,7 +49,7 @@ function main(start_at_file)
                 println(output_file, "obj = ", obj)
                 println(output_file,' ')
 
-                csv_line = csv_line*string(round(elapsed_time,digits=2))*","*string(floor(obj))*","*string(round(gap,digits = 1))*","
+                csv_line = csv_line*string(round(elapsed_time,digits=2))*","*string(floor(Int,obj))*","*string(round(gap,digits = 1))*","
 
             end
 
