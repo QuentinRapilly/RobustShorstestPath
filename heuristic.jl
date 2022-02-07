@@ -15,6 +15,7 @@ function greedy_weight(n::Int, s::Int, t::Int, p::Array{Int,1}, S::Int, p_hat::A
 
     taken_roads = copy(exist_road)
 
+    it = 0
     last_city = -1
     current_city = s
     current_path = Array([s])
@@ -25,7 +26,7 @@ function greedy_weight(n::Int, s::Int, t::Int, p::Array{Int,1}, S::Int, p_hat::A
 
     # permutation permettant de trier la liste des poids
     indices = sortperm(p + delta_2.*p_hat)
-    println("indices = ", indices)
+    # println("indices = ", indices)
 
     while current_city != t
 
@@ -39,48 +40,56 @@ function greedy_weight(n::Int, s::Int, t::Int, p::Array{Int,1}, S::Int, p_hat::A
         end
 
         if j == n || sum( p[i] + delta_2[i]*p_hat[i] for i in current_path) + p[indices[j]] + delta_2[indices[j]]*p_hat[indices[j]] > S
-            println("No further path possible.")
+            # println("No further path possible.")
 
-            if current_city == s # No possible path.
+            if current_path==[s] # No possible path.
                 # Reinitialise delta_2 pour retester avec une autre valeur
-                println("No possible path.")
+                # println("No possible path.")
                 delta_2 = rand(Float64, n)
                 delta_2 = d2*delta_2/sum(delta_2)
+                current_city = s
                 last_city = -1
-                current_path = [s]
                 taken_roads = copy(exist_road)
+                it += 1
+                println("it = ", it)
+                if it > 10000
+                    println("Pas de solution trouvée.")
+                    return [-1], [-1], -1
+                end
 
             else
+                # Réinitialise les routes potentielles arrivant en current_city
+                for i in 1:n
+                    if taken_roads[i, current_city] == -1
+                        taken_roads[i, current_city] = 1
+                    end
+                end
+
                 # Traduit dans taken_roads le fait que l'on ne doit plus emprunter cette arete
                 taken_roads[last_city, current_city] = -1
 
                 # On revient en arriere
                 current_city = last_city
 
-                println("deleted ", current_path[length(current_path)], " from the path")    
+                println("deleted ", current_path[length(current_path)], " from the path")
                 deleteat!(current_path, length(current_path)) # On enlève la ville du chemin emprunté
-
                 last_city = current_path[length(current_path)]
-
-                # Réinitialise les routes potentielles partant de last_city
-                for i in 1:n
-                    if taken_roads[last_city, i] == -1
-                        taken_roads[last_city, i] = 1
-                    end
-                end
 
                 println("current_path = ", current_path) 
             end
         
         else
+            # Mise à jour de l'historique des chemins empruntés
+            taken_roads[current_city, indices[j]] = -1
+            for i in 1:n
+                if i!=current_city && taken_roads[i, current_city]==1
+                    taken_roads[i, current_city] = -1 # On ne passe qu'une seule fois par une ville
+                end
+            end
+
             last_city = current_city
             current_city = indices[j]
-
-            # Mise à jour de l'historique des chemins empruntés
-            taken_roads[last_city, current_city] = -1
-            for i in 1:n
-                taken_roads[i, last_city] = -1 # On ne passe qu'une seule fois par une ville
-            end
+            
             # Ajout de la ville trouvée au chemin courant
             push!(current_path, current_city)
             println("Added ", current_city, " to the path.")
@@ -97,7 +106,6 @@ function greedy_weight(n::Int, s::Int, t::Int, p::Array{Int,1}, S::Int, p_hat::A
             end
         end
     end
-    println("y = ", y)
 
     # Reconstruction de x à partir de y
     x = zeros(n, n)
@@ -107,10 +115,6 @@ function greedy_weight(n::Int, s::Int, t::Int, p::Array{Int,1}, S::Int, p_hat::A
                 x[i,j] = 1
             end
         end
-    end
-
-    for i in 1:n
-        println("x[", i, ",:] = ", x[i, :])
     end
 
     m = Model(CPLEX.Optimizer)
